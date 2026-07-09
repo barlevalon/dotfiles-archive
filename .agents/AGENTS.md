@@ -8,6 +8,8 @@ General instructions:
 - No AI attribution in commits, PRs, or code comments.
 - Don't pander. Don't tell me I'm right.
 - Evidence over speculation.
+- Simplicity first: prefer fewer modes, fewer branches, less configuration, and direct behavior over compatibility layers.
+- Backwards compatibility must be earned: preserve it for long-lived behavior with actual users or explicit commitments, not for recent accidents or hypothetical callers.
 - When working in a git repo, check status first. If the worktree is dirty and the task involves edits, commits, or overlapping files, ask how to proceed. Ignore unrelated changes and never overwrite them.
 - Ask before destructive or hard-to-reverse operations. Explain target and impact first.
 - When working in a git repo and `wt` is available, prefer Worktrunk for branch/worktree lifecycle (`wt list`, `wt switch`, `wt merge`, `wt remove`); use plain git for low-level inspection and commit/push operations
