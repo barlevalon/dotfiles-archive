@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Put the daily baseline apps on predictable workspaces.
+# Re-running is safe: existing matching windows are moved; missing apps are launched.
+# It intentionally does not close duplicate windows.
+
+if [[ -z "${BASE_WORKSPACES_LOCKED:-}" ]]; then
+  exec env BASE_WORKSPACES_LOCKED=1 flock -w 30 /tmp/setup-base-workspaces.lock "$0" "$@"
+fi
+
+workspaces=(
+  1
+  1
+  2
+  2
+  3
+  3
+  4
+  5
+)
+
+classes=(
+  '^vivaldi-stable$'
+  '^(com\.mitchellh\.ghostty|Alacritty|kitty|foot)$'
+  '^vivaldi-web\.whatsapp\.com__-Default$'
+  '^vivaldi-discord\.com__channels_@me-Default$'
+  '^vivaldi-sage-intacct-planning\.slack\.com__-Default$'
+  '^vivaldi-outlook\.office\.com__mail_.*-Default$'
+  '^vivaldi-app\.plex\.tv__-Default$'
+  '^steam$'
+)
+
+commands=(
+  'omarchy-launch-browser about:blank'
+  'uwsm-app -- xdg-terminal-exec'
+  'omarchy-launch-webapp https://web.whatsapp.com/'
+  'omarchy-launch-webapp https://discord.com/channels/@me'
+  'omarchy-launch-webapp https://sage-intacct-planning.slack.com'
+  'omarchy-launch-webapp https://outlook.office.com/mail/'
+  'omarchy-launch-webapp https://app.plex.tv'
+  'uwsm-app -- steam'
+)
+
+clients_json() {
+  hyprctl -j clients
+}
+
+matching_addresses() {
+  local class_regex="$1"
+  clients_json | jq -r --arg re "$class_regex" '.[] | select(.class | test($re; "i")) | .address'
+}
+
+has_matching_window() {
+  local class_regex="$1"
+  [[ -n "$(matching_addresses "$class_regex")" ]]
+}
+
+lua_string() {
+  jq -Rn --arg value "$1" '$value'
+}
+
+move_matching_windows() {
+  local workspace="$1"
+  local class_regex="$2"
+  local address
+
+  while IFS= read -r address; do
+    [[ -n "$address" ]] || continue
+    hyprctl dispatch "hl.dsp.window.move({ workspace = $(lua_string "$workspace"), window = $(lua_string "address:$address"), follow = false })" >/dev/null
+  done < <(matching_addresses "$class_regex")
+}
+
+arrange_existing_windows() {
+  local i
+  for i in "${!workspaces[@]}"; do
+    move_matching_windows "${workspaces[$i]}" "${classes[$i]}"
+  done
+}
+
+launch_missing_apps() {
+  local i workspace class command
+
+  for i in "${!workspaces[@]}"; do
+    workspace="${workspaces[$i]}"
+    class="${classes[$i]}"
+    command="${commands[$i]}"
+
+    move_matching_windows "$workspace" "$class"
+
+    if has_matching_window "$class"; then
+      continue
+    fi
+
+    # Switch first so apps that ignore Hyprland's exec launch rule still tend to
+    # appear on the right workspace. The reconcile loop below fixes late windows.
+    hyprctl dispatch "hl.dsp.focus({ workspace = $(lua_string "$workspace") })" >/dev/null
+    hyprctl dispatch "hl.dsp.exec_cmd($(lua_string "$command"))" >/dev/null
+
+    # Short wait catches fast windows and prevents the next launch from stealing
+    # their initial workspace.
+    for _ in {1..20}; do
+      if has_matching_window "$class"; then
+        move_matching_windows "$workspace" "$class"
+        break
+      fi
+      sleep 0.1
+    done
+  done
+}
+
+arrange_existing_windows
+launch_missing_apps
+
+# Some web-app windows are created late by the browser process. Keep reconciling
+# for a bit so a slow launch still ends up on its intended workspace.
+for _ in {1..100}; do
+  arrange_existing_windows
+  sleep 0.2
+done
+
+hyprctl dispatch 'hl.dsp.focus({ workspace = "1" })' >/dev/null
+notify-send --app-name=Hyprland 'Base workspaces ready' '1: browser+terminal · 2: chat · 3: work · 4: Plex · 5: Steam' >/dev/null 2>&1 || true
