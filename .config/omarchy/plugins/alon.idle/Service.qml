@@ -18,10 +18,11 @@ Item {
   readonly property int defaultLockSeconds: 300
   readonly property var idleConfig: shell && shell.shellConfig && shell.shellConfig.idle ? shell.shellConfig.idle : ({})
   readonly property int screensaverTimeoutSeconds: secondsFromConfig(idleConfig.screensaver, defaultScreensaverSeconds)
+  readonly property bool lockEnabled: false
   readonly property int lockTimeoutSeconds: secondsFromConfig(idleConfig.lock, defaultLockSeconds)
-  readonly property int firstIdleTimeoutSeconds: Math.min(screensaverTimeoutSeconds, lockTimeoutSeconds)
+  readonly property int firstIdleTimeoutSeconds: lockEnabled ? Math.min(screensaverTimeoutSeconds, lockTimeoutSeconds) : screensaverTimeoutSeconds
   readonly property int screensaverDelaySeconds: Math.max(0, screensaverTimeoutSeconds - firstIdleTimeoutSeconds)
-  readonly property int lockDelaySeconds: Math.max(0, lockTimeoutSeconds - firstIdleTimeoutSeconds)
+  readonly property int lockDelaySeconds: lockEnabled ? Math.max(0, lockTimeoutSeconds - firstIdleTimeoutSeconds) : 0
   readonly property bool idleEnabled: stayAwakeStateLoaded && !stayAwake
   readonly property string screensaverClass: "org.omarchy.screensaver"
 
@@ -93,8 +94,10 @@ Item {
     if (root.screensaverDelaySeconds === 0) launchScreensaver()
     else screensaverTimer.restart()
 
-    if (root.lockDelaySeconds === 0) lockSystem("lock-timeout-immediate")
-    else lockTimer.restart()
+    if (root.lockEnabled) {
+      if (root.lockDelaySeconds === 0) lockSystem("lock-timeout-immediate")
+      else lockTimer.restart()
+    }
   }
 
   function cancelIdleCycle(reason) {
@@ -187,7 +190,8 @@ Item {
       inIdleCycle: root.idledThisCycle,
       screensaverStarted: root.screensaverStartedThisCycle,
       screensaver: root.screensaverTimeoutSeconds,
-      lock: root.lockTimeoutSeconds,
+      lock: root.lockEnabled ? root.lockTimeoutSeconds : false,
+      lockEnabled: root.lockEnabled,
       screensaverDelay: root.screensaverDelaySeconds,
       lockDelay: root.lockDelaySeconds,
       screensaverWindows: root.screensaverWindowCount,
@@ -266,7 +270,7 @@ Item {
     id: lockTimer
     interval: root.lockDelaySeconds * 1000
     repeat: false
-    onTriggered: if (root.idleEnabled && root.idledThisCycle) root.lockSystem("lock-timeout")
+    onTriggered: if (root.idleEnabled && root.lockEnabled && root.idledThisCycle) root.lockSystem("lock-timeout")
   }
 
   Timer {

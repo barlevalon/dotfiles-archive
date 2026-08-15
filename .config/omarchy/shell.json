@@ -65,7 +65,7 @@
     "transparent": false
   },
   "idle": {
-    "lock": 300,
+    "lock": false,
     "screensaver": 150
   },
   "plugins": [
