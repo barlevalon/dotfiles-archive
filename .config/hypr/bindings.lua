@@ -57,3 +57,13 @@ o.bind("SUPER + SHIFT + X", "X", "omarchy-launch-or-focus-webapp vivaldi-x 'http
 o.bind("SUPER + SHIFT + ALT + X", "X Post", "omarchy-launch-or-focus-webapp vivaldi-x 'https://x.com/compose/post'")
 o.bind("SUPER + W", "Close window except Schedule I", close_active_window_except_schedule_i)
 o.bind("SUPER + SHIFT + CTRL + ALT + S", "Swap split", hl.dsp.layout("swapsplit"))
+
+local function navigate_vivaldi_webapp(key)
+  local window = hl.get_active_window()
+  if window and window.class:match("^vivaldi%-") and window.class ~= "vivaldi-stable" then
+    hl.exec_cmd("wtype -M alt -k " .. key .. " -m alt")
+  end
+end
+
+o.bind("mouse:275", "Back in Vivaldi web apps", function() navigate_vivaldi_webapp("Left") end, { non_consuming = true })
+o.bind("mouse:276", "Forward in Vivaldi web apps", function() navigate_vivaldi_webapp("Right") end, { non_consuming = true })
