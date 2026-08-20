@@ -29,6 +29,18 @@
         },
         {
           "id": "omarchy.workspaces"
+        },
+        {
+          "id": "quickshell.spotify",
+          "deviceName": "Omarchy Spotify",
+          "idleShutdownMinutes": 15,
+          "showMiniPlayer": "On",
+          "shortcutPlayer": "Full player",
+          "showTrackTitle": "On",
+          "showArtistName": "Off",
+          "scrollBarText": "Off",
+          "scrollSpeed": "1",
+          "audioQuality": "320 kbps"
         }
       ],
       "right": [

@@ -40,6 +40,11 @@ hl.config({
 
 -- Personal window rules.
 o.window({ tag = "floating-window" }, { size = { 1600, 1000 } })
+o.window({ class = "^org\\.quickshell$", title = "^Omarchy Spotify$" }, {
+  float = true,
+  center = true,
+  size = { 1600, 1000 },
+})
 o.window({ class = "steam", title = "Steam" }, { tile = true })
 o.window("^steam_app_359320$", {
   float = true,
