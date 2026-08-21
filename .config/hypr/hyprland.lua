@@ -59,7 +59,7 @@ o.window("^vivaldi-app\\.plex\\.tv__-Default$", {
   opacity = "1 override 1 override 1 override",
 })
 
--- Keep video windows fully opaque, focused or not.
+-- Keep video and photo-editing windows fully opaque, focused or not.
 o.window({ tag = "pip" }, {
   tag = "-default-opacity",
   opacity = "1 override 1 override 1 override",
@@ -68,7 +68,7 @@ o.window({ title = "^(.*YouTube.*|Plex.*|▶ .*)$" }, {
   tag = "-default-opacity",
   opacity = "1 override 1 override 1 override",
 })
-o.window("^(zoom|vlc|mpv|org\\.kde\\.kdenlive|com\\.obsproject\\.Studio)$", {
+o.window("^(zoom|vlc|mpv|org\\.kde\\.kdenlive|com\\.obsproject\\.Studio|org\\.darktable\\.darktable)$", {
   tag = "-default-opacity",
   opacity = "1 override 1 override 1 override",
 })
