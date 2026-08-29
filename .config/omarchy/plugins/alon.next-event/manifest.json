@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "alon.next-event",
+  "name": "Next event",
+  "version": "1.0.0",
+  "author": "Alon",
+  "description": "Shows the next timed event today from read-only ICS feeds",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Next event",
+    "description": "Shows the next timed event today from read-only ICS feeds",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}

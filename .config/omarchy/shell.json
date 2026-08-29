@@ -20,6 +20,9 @@
           "unit": "metric"
         },
         {
+          "id": "alon.next-event"
+        },
+        {
           "id": "omarchy.system-update"
         }
       ],
