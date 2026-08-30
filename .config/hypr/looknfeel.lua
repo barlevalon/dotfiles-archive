@@ -10,7 +10,7 @@ hl.config({
     inactive_opacity = 0.90,
   },
   misc = {
-    render_unfocused_fps = 30,
+    render_unfocused_fps = 120,
   },
 })
 

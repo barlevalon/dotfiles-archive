@@ -46,13 +46,13 @@ o.window({ class = "^org\\.quickshell$", title = "^Omarchy Spotify$" }, {
   size = { 1600, 1000 },
 })
 o.window({ class = "steam", title = "Steam" }, { tile = true })
+o.window("^steam_app_[0-9]+$", { render_unfocused = true })
 o.window("^steam_app_359320$", {
   float = true,
   center = true,
   tag = "-default-opacity",
   opacity = "1 1",
   idle_inhibit = "fullscreen",
-  render_unfocused = true,
 })
 o.window("^vivaldi-app\\.plex\\.tv__-Default$", {
   tag = "-default-opacity",
