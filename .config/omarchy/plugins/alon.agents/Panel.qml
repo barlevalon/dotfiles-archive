@@ -60,7 +60,7 @@ Panel {
   }
 
   function launchAgent() {
-    if (root.bar) root.bar.run("cd \"$HOME\" && omarchy-launch-tui --app-id=org.omarchy.agent pi")
+    if (root.bar) root.bar.run("cd \"$HOME\" && env PWD=\"$HOME/.\" omarchy-agent --pick")
     root.close()
   }
 
