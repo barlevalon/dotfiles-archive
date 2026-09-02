@@ -42,13 +42,9 @@ Item {
   readonly property int cornerRadius: Style.cornerRadius
   // Toasts are fixed to the top-center. They clear the Omarchy bar when it
   // occupies the top edge.
-  // Falls back to the bar's default size (26 horizontal / 28 vertical) when
-  // shell.bar isn't reachable so the popup never lands on top of the bar.
   readonly property string barPosition: shell && shell.barConfig ? String(shell.barConfig.position || "top") : "top"
-  readonly property bool barVertical: barPosition === "left" || barPosition === "right"
-  readonly property int defaultBarSize: barVertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
-  readonly property int liveBarSize: shell && shell.bar && !shell.bar.barHidden ? Math.max(0, shell.bar.barSize) : defaultBarSize
-  readonly property int barClearance: liveBarSize + Style.gapsOut
+  readonly property int defaultTopBarSize: Style.bar.sizeHorizontal
+  readonly property int topBarSize: shell && shell.bar && !shell.bar.barHidden ? Math.max(0, shell.bar.barSize) : defaultTopBarSize
 
   // Live Notification objects by originalId, kept OUT of the ListModels: a
   // QObject stored in a model role becomes a dangling C++ pointer when the
@@ -963,9 +959,6 @@ Item {
       exclusionMode: ExclusionMode.Ignore
       color: "transparent"
 
-      readonly property var popupPlacement: NotificationLogic.popupPlacement(
-        service.barPosition, service.barClearance, Style.gapsOut)
-
       // Full-screen, fixed-size surface (like the OSD overlay). Adding or
       // removing a toast changes only the content inside; the Wayland surface
       // never resizes, so the compositor can't briefly scale a stale buffer --
@@ -980,7 +973,7 @@ Item {
         id: popupColumn
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: popupWindow.popupPlacement.margins.top
+        anchors.topMargin: service.barPosition === "top" ? service.topBarSize + Style.gapsOut : Style.gapsOut
         spacing: Style.space(8)
 
         Repeater {
@@ -1038,7 +1031,6 @@ Item {
 
             NotificationCard {
               id: card
-              anchors.horizontalCenter: parent.horizontalCenter
               app: cardSlot.app
               appIcon: cardSlot.appIcon
               summary: cardSlot.summary
