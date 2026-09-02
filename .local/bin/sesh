@@ -7,7 +7,15 @@ ICONS=false
 # name, working directory, startup command
 SESSIONS=(
   $'scratch\t~\t'
-  $'alon-mbp 💻\t~\tmosh alonhearter@alon-mbp -- sesh picker'
+)
+
+if [[ $(uname -s) == Darwin ]]; then
+  SESSIONS+=($'alon-pc 🖥️\t~\tmosh alon@alon-pc -- sesh picker')
+else
+  SESSIONS+=($'alon-mbp 💻\t~\tmosh alonhearter@alon-mbp -- sesh picker')
+fi
+
+SESSIONS+=(
   $'mini\t~\tmosh hearter@mini -- sesh picker'
   $'media\t~/repos/barlevalon/kielbasa/\tmosh alon@media'
   $'personal\t~/repos/barlevalon/kielbasa/\tmosh alon@personal'
@@ -223,7 +231,7 @@ tv_encode() {
   [[ ${1:-} == --dir-icon ]] && dir_icon=true
   while IFS= read -r line; do
     target=$(clean_selection "$line")
-    token=$(printf '%s' "$target" | base64 -w0)
+    token=$(printf '%s' "$target" | base64 | tr -d '\n')
     if $dir_icon; then
       line=$'\033[36m\033[39m '"$line"
     fi
@@ -233,7 +241,9 @@ tv_encode() {
 
 tv_dispatch() {
   local action=$1 target
-  target=$(printf '%s' "$2" | base64 -d)
+  if ! target=$(printf '%s' "$2" | base64 -d 2>/dev/null); then
+    target=$(printf '%s' "$2" | base64 -D)
+  fi
   case $action in
     preview) preview "$target" ;;
     connect) connect "$target" ;;
