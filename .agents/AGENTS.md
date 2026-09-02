@@ -12,7 +12,7 @@ General instructions:
 - Backwards compatibility must be earned: preserve it for long-lived behavior with actual users or explicit commitments, not for recent accidents or hypothetical callers.
 - When working in a git repo, check status first. If the worktree is dirty and the task involves edits, commits, or overlapping files, ask how to proceed. Ignore unrelated changes and never overwrite them.
 - Ask before destructive or hard-to-reverse operations. Explain target and impact first.
-- When working in a git repo and `wt` is available, prefer Worktrunk for branch/worktree lifecycle (`wt list`, `wt switch`, `wt merge`, `wt remove`); use plain git for low-level inspection and commit/push operations
+- Worktree routing: use `wt` for ordinary Git worktree lifecycle (`wt list`, `wt switch`, `wt merge`, `wt remove`) when available; use `orca-cli` when Orca-managed state matters or the user requests a full ownership handoff. “Another worktree” alone means `wt`. Ignore Worktrunk agent-handoff recipes inside Orca-managed contexts. Use plain git for low-level inspection and commit/push operations
 - For non-trivial, multi-file, or risky edits, give a short plan before changing files. For small localized changes, proceed directly.
 - Use tmux for sudo or long-running commands:
   - Create session first: `tmux new-session -d -s session-name` or attach to existing
