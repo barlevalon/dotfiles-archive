@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SELF=${BASH_SOURCE[0]}
+ICONS=false
+
+# name, working directory, startup command
+SESSIONS=(
+  $'scratch\t~\t'
+  $'alon-mbp 💻\t~\tmosh alonhearter@alon-mbp -- sesh picker'
+  $'mini\t~\tmosh hearter@mini -- sesh picker'
+  $'media\t~/repos/barlevalon/kielbasa/\tmosh alon@media'
+  $'personal\t~/repos/barlevalon/kielbasa/\tmosh alon@personal'
+  $'edge\t~/repos/barlevalon/kielbasa/\tmosh alon@edge'
+  $'irssi\t~\tirssi'
+)
+
+usage() {
+  cat <<'EOF'
+Usage: sesh <command>
+
+Commands:
+  picker              Pick or manage a session
+  list [-t|-c|-z] [-i|--icons]
+  connect <name|path>
+  preview <name|path>
+  kill <name>
+EOF
+}
+
+emit() {
+  local type=$1 value=$2
+  if ! $ICONS; then
+    printf '%s\n' "$value"
+    return
+  fi
+
+  case $type in
+    tmux)   printf '\033[34m\033[39m %s\n' "$value" ;;
+    config) printf '\033[90m\033[39m %s\n' "$value" ;;
+    dir)    printf '\033[36m\033[39m %s\n' "$value" ;;
+  esac
+}
+
+clean_selection() {
+  local value
+  value=$(printf '%s' "$1" | sed -E $'s/\033\\[[0-9;]*m//g')
+  case $value in
+    ' '*|' '*|' '*) value=${value#* } ;;
+  esac
+  printf '%s' "$value"
+}
+
+expand_path() {
+  local path=$1
+  printf '%s' "${path/#\~/$HOME}"
+}
+
+session_name() {
+  local name
+  name=$(basename -- "$1")
+  name=${name//./_}
+  name=${name//:/_}
+  name=${name// /_}
+  printf '%s' "$name"
+}
+
+configured_session() {
+  local wanted=$1 row name path startup
+  CONFIG_PATH=
+  CONFIG_STARTUP=
+
+  for row in "${SESSIONS[@]}"; do
+    startup=
+    IFS=$'\t' read -r name path startup <<< "$row"
+    if [[ $name == "$wanted" ]]; then
+      CONFIG_PATH=$(expand_path "$path")
+      CONFIG_STARTUP=$startup
+      return 0
+    fi
+  done
+  return 1
+}
+
+list_tmux() {
+  local _ name
+  while IFS='|' read -r _ name; do
+    [[ -n $name ]] && emit tmux "$name"
+  done < <(tmux list-sessions -F '#{session_last_attached}|#{session_name}' 2>/dev/null | sort -t '|' -k1,1nr || true)
+  return 0
+}
+
+list_configured() {
+  local row name path startup
+  for row in "${SESSIONS[@]}"; do
+    IFS=$'\t' read -r name path startup <<< "$row"
+    emit config "$name"
+  done
+  return 0
+}
+
+list_zoxide() {
+  local path
+  while IFS= read -r path; do
+    [[ -n $path ]] || continue
+    path=${path/#$HOME/\~}
+    emit dir "$path"
+  done < <(zoxide query -l 2>/dev/null || true)
+  return 0
+}
+
+list_sessions() {
+  local tmux=false config=false zoxide=false selected=false
+  while (($#)); do
+    case $1 in
+      -t|--tmux) tmux=true; selected=true ;;
+      -c|--config) config=true; selected=true ;;
+      -z|--zoxide) zoxide=true; selected=true ;;
+      -i|--icons) ICONS=true ;;
+      *) printf 'sesh: unknown list option: %s\n' "$1" >&2; return 2 ;;
+    esac
+    shift
+  done
+
+  if ! $selected; then
+    tmux=true config=true zoxide=true
+  fi
+  if $tmux; then list_tmux; fi
+  if $config; then list_configured; fi
+  if $zoxide; then list_zoxide; fi
+}
+
+switch_to() {
+  local name=$1 client=${SESH_CLIENT:-} candidate pane
+  if [[ -n ${TMUX:-} ]]; then
+    if [[ -z $client && -n ${TMUX_PANE:-} ]]; then
+      while IFS='|' read -r candidate pane; do
+        if [[ $pane == "$TMUX_PANE" ]]; then
+          client=$candidate
+          break
+        fi
+      done < <(tmux list-clients -F '#{client_name}|#{client_active_pane}')
+    fi
+    if [[ -n $client ]]; then
+      tmux switch-client -c "$client" -t "=$name"
+    else
+      tmux switch-client -t "=$name"
+    fi
+  else
+    exec tmux attach-session -t "=$name"
+  fi
+}
+
+connect() {
+  local target path name
+  target=$(clean_selection "$1")
+
+  if tmux has-session -t "=$target" 2>/dev/null; then
+    switch_to "$target"
+    return
+  fi
+
+  if configured_session "$target"; then
+    path=$CONFIG_PATH
+    name=$target
+  else
+    path=$(expand_path "$target")
+    if [[ ! -d $path ]]; then
+      path=$(zoxide query "$target" 2>/dev/null) || {
+        printf 'sesh: no session or directory: %s\n' "$target" >&2
+        return 1
+      }
+    fi
+    name=$(session_name "$path")
+    CONFIG_STARTUP=
+  fi
+
+  if ! tmux has-session -t "=$name" 2>/dev/null; then
+    tmux new-session -d -s "$name" -c "$path"
+    if [[ -n $CONFIG_STARTUP ]]; then
+      tmux send-keys -l -t "=$name:" "$CONFIG_STARTUP"
+      tmux send-keys -t "=$name:" Enter
+    fi
+  fi
+
+  zoxide add "$path" 2>/dev/null || true
+  switch_to "$name"
+}
+
+preview() {
+  local target path
+  target=$(clean_selection "$1")
+
+  if tmux has-session -t "=$target" 2>/dev/null; then
+    tmux capture-pane -ep -t "=$target:" -S -200
+    return
+  fi
+
+  if configured_session "$target"; then
+    path=$CONFIG_PATH
+  else
+    path=$(expand_path "$target")
+    [[ -d $path ]] || path=$(zoxide query "$target" 2>/dev/null || true)
+  fi
+
+  [[ -d ${path:-} ]] || return 0
+  if command -v eza >/dev/null; then
+    eza --all --git --icons --color=always "$path"
+  else
+    ls -la --color=always "$path"
+  fi
+}
+
+kill_session() {
+  local target
+  target=$(clean_selection "$1")
+  tmux has-session -t "=$target" 2>/dev/null || return 0
+  tmux kill-session -t "=$target"
+}
+
+tv_encode() {
+  local line target token dir_icon=false
+  [[ ${1:-} == --dir-icon ]] && dir_icon=true
+  while IFS= read -r line; do
+    target=$(clean_selection "$line")
+    token=$(printf '%s' "$target" | base64 -w0)
+    if $dir_icon; then
+      line=$'\033[36m\033[39m '"$line"
+    fi
+    printf '%s\t%s\n' "$token" "$line"
+  done
+}
+
+tv_dispatch() {
+  local action=$1 target
+  target=$(printf '%s' "$2" | base64 -d)
+  case $action in
+    preview) preview "$target" ;;
+    connect) connect "$target" ;;
+    kill) kill_session "$target" ;;
+    *) return 2 ;;
+  esac
+}
+
+picker() {
+  local selection
+  local -a fuzzy=(fzf)
+  if [[ -n ${TMUX:-} ]] && command -v fzf-tmux >/dev/null; then
+    fuzzy=(fzf-tmux -p "80%,70%")
+  fi
+
+  selection=$("$SELF" list --icons | "${fuzzy[@]}" \
+    --no-sort --ansi --border-label ' sesh ' --prompt '⚡ ' \
+    --header '^a all ^t tmux ^g configs ^x zoxide ^f find ^d tmux kill ^n clone ^o new dir' \
+    --bind 'tab:down,btab:up' \
+    --bind "ctrl-a:change-prompt(⚡ )+reload($SELF list --icons)" \
+    --bind "ctrl-t:change-prompt(🪟 )+reload($SELF list --icons -t)" \
+    --bind "ctrl-g:change-prompt(⚙️ )+reload($SELF list --icons -c)" \
+    --bind "ctrl-x:change-prompt(📁 )+reload($SELF list --icons -z)" \
+    --bind "ctrl-f:change-prompt(🔎 )+reload($HOME/.config/tmux/scripts/sesh-find-dirs.sh)" \
+    --bind "ctrl-d:execute($SELF kill {})+change-prompt(⚡ )+reload($SELF list --icons)" \
+    --bind "ctrl-n:become($HOME/.config/tmux/scripts/sesh-clone.sh)" \
+    --bind "ctrl-o:become(bash $HOME/.config/tmux/scripts/sesh-new-dir.sh)" \
+    --preview-window 'right:65%' \
+    --preview "$SELF preview {}" || true)
+
+  if [[ -n $selection ]]; then
+    "$SELF" connect "$selection"
+  fi
+}
+
+self_test() {
+  [[ $(clean_selection $'\033[34m\033[39m hello') == hello ]]
+  [[ $(session_name '/tmp/my.repo') == my_repo ]]
+  configured_session mini
+  [[ $CONFIG_PATH == "$HOME" ]]
+  [[ $CONFIG_STARTUP == 'mosh hearter@mini -- sesh picker' ]]
+  printf 'ok\n'
+}
+
+command=${1:-}
+[[ $# -eq 0 ]] || shift
+case $command in
+  picker) picker "$@" ;;
+  list) list_sessions "$@" ;;
+  connect) [[ $# -eq 1 ]] || { usage >&2; exit 2; }; connect "$1" ;;
+  preview) [[ $# -eq 1 ]] || { usage >&2; exit 2; }; preview "$1" ;;
+  kill) [[ $# -eq 1 ]] || { usage >&2; exit 2; }; kill_session "$1" ;;
+  tv-encode) tv_encode "$@" ;;
+  tv) [[ $# -eq 2 ]] || exit 2; tv_dispatch "$1" "$2" ;;
+  self-test) self_test ;;
+  -h|--help|help|'') usage ;;
+  -v|--version|version) printf 'sesh local\n' ;;
+  *) printf 'sesh: unknown command: %s\n' "$command" >&2; usage >&2; exit 2 ;;
+esac

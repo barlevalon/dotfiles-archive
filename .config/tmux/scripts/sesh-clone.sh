@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -euo pipefail
 
 # Prompt for repo
 repo=$(echo "" | fzf \
@@ -12,24 +12,35 @@ if [[ -z "$repo" ]]; then
   exit 0
 fi
 
-# Normalize repo format - add github.com if just user/repo
-if [[ "$repo" =~ ^[^/]+/[^/]+$ ]]; then
-  repo="https://github.com/$repo"
+case $repo in
+  https://github.com/*)
+    repo_path=${repo#https://github.com/}
+    ;;
+  git@github.com:*)
+    repo_path=${repo#git@github.com:}
+    ;;
+  */*)
+    repo_path=$repo
+    repo="https://github.com/$repo"
+    ;;
+  *)
+    printf 'Expected owner/repo or a GitHub clone URL\n' >&2
+    exit 1
+    ;;
+esac
+
+repo_path=${repo_path%.git}
+if [[ ! $repo_path =~ ^[^/[:space:]]+/[^/[:space:]]+$ ]] ||
+   [[ $repo_path == ../* || $repo_path == */../* || $repo_path == */.. ]]; then
+  printf 'Invalid GitHub repository: %s\n' "$repo_path" >&2
+  exit 1
 fi
 
-# Extract repo name for directory
-repo_name=$(basename "$repo" .git)
-
-# Choose destination
-dest=$(printf "work\npersonal" | fzf \
-  --prompt "Clone to: ~/" \
-  --header "Select destination")
-
-if [[ -z "$dest" ]]; then
-  exit 0
+target_dir=$(realpath -m -- "$HOME/repos/$repo_path")
+if [[ $target_dir != "$HOME/repos/"* ]]; then
+  printf 'Clone target must stay under ~/repos\n' >&2
+  exit 1
 fi
-
-target_dir="$HOME/$dest/$repo_name"
 
 # Clone if doesn't exist
 if [[ -d "$target_dir" ]]; then
@@ -38,5 +49,5 @@ else
   git clone "$repo" "$target_dir"
 fi
 
-# Connect via sesh
-sesh connect "$target_dir"
+# Connect to its tmux session
+"$HOME/.local/bin/sesh" connect "$target_dir"

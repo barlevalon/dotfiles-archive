@@ -1,0 +1,37 @@
+# Television channel for the local sesh script
+
+[metadata]
+name = "sesh"
+description = "Session manager integrating tmux sessions, zoxide directories, and config paths"
+requirements = ["fd", "base64"]
+
+[source]
+# Multiple source commands for cycling through different modes
+# Press Ctrl+S to cycle between sources
+command = [
+  "$HOME/.local/bin/sesh list --icons | $HOME/.local/bin/sesh tv-encode",
+  "$HOME/.local/bin/sesh list -t --icons | $HOME/.local/bin/sesh tv-encode",
+  "$HOME/.local/bin/sesh list -c --icons | $HOME/.local/bin/sesh tv-encode",
+  "$HOME/.local/bin/sesh list -z --icons | $HOME/.local/bin/sesh tv-encode",
+  "fd -H -d 2 -t d -E .Trash . ~ | $HOME/.local/bin/sesh tv-encode --dir-icon"
+]
+ansi = true
+display = "{split:\t:1}"
+output = "{split:\t:1|strip_ansi|split: :1..|join: }"
+
+[preview]
+command = "$HOME/.local/bin/sesh tv preview '{split:\t:0}'"
+
+[keybindings]
+enter = "actions:connect"
+ctrl-d = [ "actions:kill_session", "reload_source" ]
+
+[actions.connect]
+description = "Connect to selected session"
+command = "$HOME/.local/bin/sesh tv connect '{split:\t:0}'"
+mode = "execute"
+
+[actions.kill_session]
+description = "Kill selected tmux session (press Ctrl+r to reload)"
+command = "$HOME/.local/bin/sesh tv kill '{split:\t:0}'"
+mode = "fork"
