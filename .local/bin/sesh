@@ -246,7 +246,7 @@ picker() {
   local selection
   local -a fuzzy=(fzf)
   if [[ -n ${TMUX:-} ]] && command -v fzf-tmux >/dev/null; then
-    fuzzy=(fzf-tmux -p "80%,70%")
+    fuzzy=(fzf-tmux -p "100%,100%")
   fi
 
   selection=$("$SELF" list --icons | "${fuzzy[@]}" \
