@@ -86,15 +86,20 @@
   "plugins": [
     {
       "id": "alon.idle"
+    },
+    {
+      "id": "alon.notifications"
     }
   ],
   "version": 1,
   "disabledPlugins": [
     "omarchy.media",
-    "omarchy.idle"
+    "omarchy.idle",
+    "omarchy.notifications"
   ],
   "cloneSourceRestores": [
     "alon.media",
-    "alon.idle"
+    "alon.idle",
+    "alon.notifications"
   ]
 }
