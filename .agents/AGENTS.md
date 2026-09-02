@@ -33,7 +33,7 @@ General instructions:
   - If using real Chromium profile, repeat `--profile Default` on every browser command.
   - Do not inspect authenticated accounts unless explicitly asked.
 - Use `pi-subagents` only for large-repo scouting, independent review, or parallel investigation. Prefer single-agent flow otherwise.
-- Use Plannotator for risky plans or code review approval.
+- Use Hunk for interactive code review. Load the Hunk review skill when a Hunk session is running.
 - Tool ownership:
   - languages and language linters via mise/npm/uv
   - standalone system CLIs via pacman/yay
