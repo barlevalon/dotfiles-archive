@@ -11,16 +11,33 @@ if [[ -z "$dir_name" ]]; then
   exit 0
 fi
 
-if [[ $dir_name == /* ]]; then
-  printf 'Path must be relative to ~/repos\n' >&2
-  exit 1
-fi
+case "/$dir_name/" in
+  *"/../"*|*"/./"*|//*)
+    printf 'Path must be relative to ~/repos\n' >&2
+    exit 1
+    ;;
+esac
 
-target_dir=$(realpath -m -- "$HOME/repos/$dir_name")
-if [[ $target_dir != "$HOME/repos/"* ]]; then
+root=$HOME/repos
+mkdir -p -- "$root"
+target_dir=$root/$dir_name
+probe=$target_dir
+while [[ ! -e $probe ]]; do
+  probe=${probe%/*}
+done
+
+canonical_root=$(cd -P "$root" && pwd)
+canonical_probe=$(cd -P "$probe" 2>/dev/null && pwd) || {
   printf 'Path must stay under ~/repos\n' >&2
   exit 1
-fi
+}
+case $canonical_probe in
+  "$canonical_root"|"$canonical_root"/*) ;;
+  *)
+    printf 'Path must stay under ~/repos\n' >&2
+    exit 1
+    ;;
+esac
 
 mkdir -p -- "$target_dir"
 

@@ -31,16 +31,32 @@ esac
 
 repo_path=${repo_path%.git}
 if [[ ! $repo_path =~ ^[^/[:space:]]+/[^/[:space:]]+$ ]] ||
-   [[ $repo_path == ../* || $repo_path == */../* || $repo_path == */.. ]]; then
+   [[ $repo_path == ../* || $repo_path == ./* ||
+      $repo_path == */.. || $repo_path == */. ]]; then
   printf 'Invalid GitHub repository: %s\n' "$repo_path" >&2
   exit 1
 fi
 
-target_dir=$(realpath -m -- "$HOME/repos/$repo_path")
-if [[ $target_dir != "$HOME/repos/"* ]]; then
+root=$HOME/repos
+mkdir -p -- "$root"
+target_dir=$root/$repo_path
+probe=$target_dir
+while [[ ! -e $probe ]]; do
+  probe=${probe%/*}
+done
+
+canonical_root=$(cd -P "$root" && pwd)
+canonical_probe=$(cd -P "$probe" 2>/dev/null && pwd) || {
   printf 'Clone target must stay under ~/repos\n' >&2
   exit 1
-fi
+}
+case $canonical_probe in
+  "$canonical_root"|"$canonical_root"/*) ;;
+  *)
+    printf 'Clone target must stay under ~/repos\n' >&2
+    exit 1
+    ;;
+esac
 
 # Clone if doesn't exist
 if [[ -d "$target_dir" ]]; then
