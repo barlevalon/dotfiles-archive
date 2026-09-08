@@ -1,0 +1,23 @@
+[Unit]
+Description=Orca runtime server with on-demand desktop UI
+After=graphical-session.target
+PartOf=graphical-session.target
+ConditionEnvironment=DISPLAY
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=/home/alon
+Slice=app-graphical.slice
+UMask=0077
+ExecStart=/home/alon/.local/opt/orca/squashfs-root/AppRun serve --port 6768 --pairing-address ws://alon-pc:6768 --mobile-pairing --json
+StandardOutput=truncate:/home/alon/.local/state/orca/server-ready.json
+StandardError=journal
+KillMode=mixed
+Restart=on-failure
+RestartPreventExitStatus=3
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
