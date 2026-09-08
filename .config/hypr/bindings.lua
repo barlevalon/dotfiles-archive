@@ -71,3 +71,4 @@ end
 
 o.bind("mouse:275", "Back in Vivaldi web apps", function() navigate_vivaldi_webapp("Left") end, { non_consuming = true })
 o.bind("mouse:276", "Forward in Vivaldi web apps", function() navigate_vivaldi_webapp("Right") end, { non_consuming = true })
+o.bind("mouse:278", "Back in Vivaldi web apps", function() navigate_vivaldi_webapp("Left") end, { non_consuming = true })
